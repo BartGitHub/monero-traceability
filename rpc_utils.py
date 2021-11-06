@@ -1,6 +1,6 @@
 from asyncio.locks import Semaphore
 from typing import Any, Coroutine, Dict, List
-import requests
+#import requests
 import json
 from itertools import chain, accumulate
 import asyncio
@@ -10,6 +10,7 @@ url = "http://localhost:1800/"
 max_number_of_requests = 2000
 
 class Output(object):
+    __slots__ = 'index', 'amount'
     def __init__(self, index, amount) -> None:
         self.index = index
         self.amount = amount
@@ -34,6 +35,7 @@ class Output(object):
 
 
 class Input(object):
+    __slots__ = 'keys', 'block_height', 'block_timestamp', 'number_of_mixins'
     def __init__(self, keys: List[Output], block_height: int, block_timestamp: int):
         self.keys: List[Output] = keys
         self.block_height: int = block_height
@@ -78,9 +80,15 @@ async def get_block_async(height: int, session: ClientSession) -> Coroutine[None
         "method": "get_block",
         "params": { "height": height}
     }
-    async with session.get(get_block_url, json=data) as response:
-        payload = await response.read()
-        return json.loads(json.loads(payload)["result"]["json"])
+    try:
+        async with session.get(get_block_url, json=data) as response:
+            payload = await response.read()
+            return json.loads(json.loads(payload)["result"]["json"])
+    except asyncio.TimeoutError:
+        print("TimeoutError on block with height: {}".format(height))
+    except:
+        print("Unexpected error occurred when retrieving block with height: {}".format(height))
+    return {}
 
 get_transactions_url = url + "get_transactions"
 
@@ -104,7 +112,7 @@ async def bound_get_input_keys_async(sem: Semaphore, height: int, session: Clien
     async with sem:
         block = await get_block_async(height, session)
         # Check if block contains non-coinbase transactions
-        if len(block["tx_hashes"]) == 0:
+        if "tx_hashes" not in block or len(block["tx_hashes"]) == 0:
             return None
         block_tx_keys = await get_transaction_inputs_async(block["tx_hashes"], session)
         return list(chain.from_iterable(map(lambda tx_keys:

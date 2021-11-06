@@ -1,11 +1,9 @@
 from typing import Set, Generator
 from rpc_utils import *
 
-import asyncio
-
 max_block_height = 200 #1240503
 
-def heuristic_1(eta: int, T: int) -> Generator[List[Input], None, None]:
+async def heuristic_1(eta: int, T: int) -> Generator[List[Input], None, None]:
     """Implementation of Alogorithm 1: Heuristic I
 
     Args:
@@ -17,7 +15,7 @@ def heuristic_1(eta: int, T: int) -> Generator[List[Input], None, None]:
 
     # Fill keysToAnalyze list, corresponds to lines 3-10
     # Asynchronous implementation to reduce waiting times
-    keys_to_analyze = asyncio.run(get_input_keys_async(range(0, T)))
+    keys_to_analyze = await get_input_keys_async(range(0, T))
     
     print("Done with async RPC, found {} different outputs".format(len(keys_to_analyze)))
 
